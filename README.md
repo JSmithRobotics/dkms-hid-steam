@@ -100,6 +100,48 @@ Valve ids the driver references and nothing else. Because the driver's include
 is quoted, this copy is what the compiler finds, so the driver source itself
 needs no patch.
 
+## "It installed, but every input reads zero"
+
+Expected, and not a fault in the install. On a 2026 controller the driver does
+**not** leave lizard mode on its own, and while lizard mode is on it reports no
+gamepad input at all — so `/dev/input/js0` exists, opens, and is silent, while
+the trackpad still drives the mouse.
+
+Both halves are in `hid-steam.c`. Opening the device is what disables lizard
+mode on a 2015 controller, and Ibex is excluded from that:
+
+```c
+/* Disabling lizard mode automatically is only done on the Steam
+ * Controller. On the Steam Deck, this is toggled manually by holding
+ * the options button instead ... */
+if (!(steam->quirks & (STEAM_QUIRK_DECK | STEAM_QUIRK_IBEX))) {
+```
+
+and every input handler then returns early:
+
+```c
+if (!steam->gamepad_mode && lizard_mode)
+    return;
+```
+
+Two ways to switch it over:
+
+- **Hold the Start button** for about half a second (`45 * HZ / 100`, so 450 ms).
+  That toggles gamepad mode, exactly as holding Options does on a Steam Deck.
+  Holding it again toggles back.
+- **Turn lizard mode off outright**, which is what you want on a machine where
+  the controller is an input device and not a couch mouse:
+
+  ```sh
+  echo N | sudo tee /sys/module/hid_steam/parameters/lizard_mode    # now
+  echo 'options hid_steam lizard_mode=0' | sudo tee /etc/modprobe.d/hid-steam.conf   # and at boot
+  ```
+
+  The parameter has a setter that pushes the change to every connected device,
+  so it takes effect immediately with no reload and no replug.
+
+Confirm with `jstest /dev/input/js0`, or on a ROS host `ros2 topic echo /joy`.
+
 ## Button and axis numbering
 
 A 2026 controller does **not** enumerate like a 2015 one, which matters to
