@@ -53,9 +53,27 @@ if already_supported && ! sudo dkms status -m "$PKG_NAME" 2>/dev/null | grep -q 
 fi
 
 command -v dkms >/dev/null || die "dkms is not installed (Arch: sudo pacman -S dkms; Debian: sudo apt install dkms)"
+
 KBUILD="/usr/lib/modules/${KVER}/build"
 [ -d "$KBUILD" ] || KBUILD="/lib/modules/${KVER}/build"
-[ -d "$KBUILD" ] || die "no kernel build tree for ${KVER} (Arch: linux-headers; Debian: linux-headers-${KVER})"
+if [ ! -d "$KBUILD" ]; then
+	# Naming the headers package is rarely the useful half. Far more often the
+	# headers are installed for a kernel that is not the one running, because a
+	# distro upgrade moved them and nothing has rebooted yet -- so say which
+	# kernels can be built for, which turns a dead end into a next step.
+	shopt -s nullglob
+	buildable=()
+	for tree in /usr/lib/modules/*/build /lib/modules/*/build; do
+		candidate="${tree%/build}"
+		buildable+=("${candidate##*/}")
+	done
+	if [ ${#buildable[@]} -gt 0 ]; then
+		warn "No kernel build tree for the running kernel, ${KVER}."
+		warn "Headers ARE installed for: ${buildable[*]}"
+		die "Reboot into one of those, or build for it without loading: KVER=${buildable[0]} $0"
+	fi
+	die "No kernel headers installed at all (Arch: sudo pacman -S linux-headers; Debian: sudo apt install linux-headers-${KVER})"
+fi
 
 LOCKDOWN="$(cat /sys/kernel/security/lockdown 2>/dev/null || echo '[none]')"
 case "$LOCKDOWN" in
@@ -71,6 +89,12 @@ sudo install -m 644 "${HERE}/hid-steam.c" "${HERE}/hid-ids.h" "${HERE}/Makefile"
 say "Building for ${KVER} (driver from $(cat "${HERE}/UPSTREAM_REF"))"
 sudo dkms add -m "$PKG_NAME" -v "$PKG_VERSION" 2>/dev/null || true
 sudo dkms install -m "$PKG_NAME" -v "$PKG_VERSION" -k "$KVER" --force
+
+if [ "$KVER" != "$(uname -r)" ]; then
+	ok "Built and installed for ${KVER}. You are running $(uname -r), so it cannot be"
+	ok "loaded now: reboot into ${KVER} and the controller will be claimed at boot."
+	exit 0
+fi
 
 say "Loading"
 sudo modprobe -r hid_steam 2>/dev/null || true
