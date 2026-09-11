@@ -28,12 +28,34 @@ error but a silence.
 git clone https://github.com/JSmithRobotics/dkms-hid-steam && cd dkms-hid-steam && ./install.sh
 ```
 
-Needs `dkms` and the kernel headers for the running kernel (`linux-headers` on
-Arch, `linux-headers-$(uname -r)` on Debian). Prompts for sudo rather than
-wanting to be run as root. Undo with `./install.sh --uninstall`.
+Needs `dkms` and the kernel headers **for the running kernel**. Prompts for sudo
+rather than wanting to be run as root. Undo with `./install.sh --uninstall`.
 
 Run it on the machine the controller is plugged into. It refuses to run inside a
 container, where there is no module tree to install into.
+
+### "no kernel build tree for &lt;your kernel&gt;"
+
+Usually this does not mean the headers are missing. It means they are installed
+for a *different* kernel, because a rolling distro moved them forward and
+nothing has rebooted since — so installing `linux-headers` again changes
+nothing, since that fetches headers for the new kernel too. The script lists
+which kernels it can build for, and there are three ways out:
+
+- **Reboot** into the kernel the headers belong to, then run it again. Simplest
+  where a reboot is cheap.
+- **Build for that kernel now, load it later:** `KVER=<that kernel> ./install.sh`.
+  It stops after installing rather than pretending a module built for a kernel
+  you are not running can be loaded into the one you are.
+- **Install headers matching the running kernel**, if a reboot is not welcome.
+  On Arch they are in the [archive](https://archive.archlinux.org/):
+
+  ```
+  sudo pacman -U https://archive.archlinux.org/packages/l/linux-headers/linux-headers-$(uname -r | sed 's/-arch/.arch/')-x86_64.pkg.tar.zst
+  ```
+
+  Note this pins stale headers that the next `-Syu` will move forward again;
+  that is fine, because DKMS rebuilds against whatever kernel is current.
 
 ## What makes it safe to leave installed
 
