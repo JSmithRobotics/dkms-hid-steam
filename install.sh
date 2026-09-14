@@ -84,7 +84,7 @@ esac
 say "Installing sources to ${SRC_DIR}"
 sudo rm -rf "$SRC_DIR"
 sudo install -d "$SRC_DIR"
-sudo install -m 644 "${HERE}/hid-steam.c" "${HERE}/hid-ids.h" "${HERE}/Makefile" "${HERE}/dkms.conf" "$SRC_DIR/"
+sudo install -m 644 "${HERE}/hid-steam.c" "${HERE}/hid-ids.h" "${HERE}/compat-input-codes.h" "${HERE}/Makefile" "${HERE}/dkms.conf" "$SRC_DIR/"
 
 say "Building for ${KVER} (driver from $(cat "${HERE}/UPSTREAM_REF"))"
 sudo dkms add -m "$PKG_NAME" -v "$PKG_VERSION" 2>/dev/null || true

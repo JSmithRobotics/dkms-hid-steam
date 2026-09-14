@@ -1,5 +1,10 @@
 obj-m += hid-steam.o
 
+# Force-included rather than added to hid-steam.c's includes, so the vendored
+# driver source stays byte-identical to upstream and tools/update-driver.sh can
+# keep re-fetching it verbatim.
+ccflags-y += -include $(src)/compat-input-codes.h
+
 KVER ?= $(shell uname -r)
 KDIR ?= /lib/modules/$(KVER)/build
 
