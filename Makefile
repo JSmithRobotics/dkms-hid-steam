@@ -4,6 +4,8 @@ obj-m += hid-steam.o
 # driver source stays byte-identical to upstream and tools/update-driver.sh can
 # keep re-fetching it verbatim.
 ccflags-y += -include $(src)/compat-input-codes.h
+ccflags-y += -include $(src)/compat-minmax.h
+ccflags-y += -I$(src)/compat
 
 KVER ?= $(shell uname -r)
 KDIR ?= /lib/modules/$(KVER)/build

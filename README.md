@@ -73,8 +73,11 @@ release, which a version comparison would get wrong.
 those bounds are inclusive — so it builds up to 7.2.999 and stops at 7.3-rc1,
 exactly where the driver went in-tree. Past that DKMS skips it gracefully
 instead of shadowing a newer driver with this older copy. The floor,
-`BUILD_EXCLUSIVE_KERNEL_MIN="6.12"`, is `linux/unaligned.h`, which the driver
-includes.
+`BUILD_EXCLUSIVE_KERNEL_MIN="6.8"`, is the oldest kernel it is built against —
+the one L4T r38 ships on Jetson Thor. Below 6.12 two shims stand in for what the
+driver expects: `compat/linux/unaligned.h` for the header that kernel lacks,
+and `compat-minmax.h` for the `max()` that kernel types more strictly. Both are
+inert from 6.12 on.
 
 **It survives kernel updates.** `AUTOINSTALL="yes"`, so DKMS rebuilds it rather
 than leaving you without a gamepad after the next upgrade.
